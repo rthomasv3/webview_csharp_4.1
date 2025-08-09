@@ -28,26 +28,45 @@ FetchContent_Declare(
 )
 
 # Set options for webview build
-set(WEBVIEW_BUILD_STATIC_LIBRARY ON CACHE BOOL "" FORCE)
-set(WEBVIEW_BUILD_SHARED_LIBRARY OFF CACHE BOOL "" FORCE)
+set(WEBVIEW_BUILD OFF CACHE BOOL "" FORCE)  # Don't build their targets
+set(WEBVIEW_BUILD_AMALGAMATION OFF CACHE BOOL "" FORCE)
 set(WEBVIEW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(WEBVIEW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(WEBVIEW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(webviewNative)
 
-# Create our own shared library that wraps the static webview library
-add_library(webview SHARED)
+# Build our own shared library from the webview sources
+file(GLOB WEBVIEW_SOURCES 
+    "${webviewnative_SOURCE_DIR}/src/*.cc"
+    "${webviewnative_SOURCE_DIR}/src/*.c"
+)
 
-# Link against the webview static library
-target_link_libraries(webview PUBLIC webview::core_static)
+add_library(webview SHARED ${WEBVIEW_SOURCES})
+
+# Include the webview headers
+target_include_directories(webview PUBLIC 
+    "${webviewnative_SOURCE_DIR}/include"
+)
+
+# Define WEBVIEW_BUILD_SHARED for building a shared library
+target_compile_definitions(webview PRIVATE WEBVIEW_BUILD_SHARED)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     target_compile_definitions(webview PRIVATE "WEBVIEW_API=__declspec(dllexport)")
-    target_link_libraries(webview PUBLIC WebView2Loader.dll.lib)
+    # Find and link WebView2
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/libs/WebView2Loader.dll.lib)
+        target_link_libraries(webview PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/libs/WebView2Loader.dll.lib)
+    endif()
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/libs/WebView2Loader.dll)
         configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libs/WebView2Loader.dll WebView2Loader.dll COPYONLY)
     endif()
+    # Windows system libraries
+    target_link_libraries(webview PUBLIC advapi32 ole32 shell32 shlwapi user32 version)
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    target_link_libraries(webview PUBLIC PkgConfig::gtk3 PkgConfig::webkit2)
+    target_compile_definitions(webview PRIVATE WEBVIEW_GTK)
+    target_link_libraries(webview PUBLIC PkgConfig::gtk3 PkgConfig::webkit2 dl)
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    target_compile_definitions(webview PRIVATE WEBVIEW_COCOA)
+    target_link_libraries(webview PUBLIC "-framework WebKit" dl)
 endif()
