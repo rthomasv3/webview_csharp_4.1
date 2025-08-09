@@ -1,70 +1,46 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.11.0)
 project(webview VERSION 0.10.0)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Fetch webview
+if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT -DWEBVIEW_STATIC")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd -DWEBVIEW_STATIC")
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(
+        gtk3 REQUIRED gtk+-3.0
+        IMPORTED_TARGET
+      )
+    pkg_check_modules(
+        webkit2 REQUIRED webkit2gtk-4.1
+        IMPORTED_TARGET
+      )
+    set(CMAKE_CXX_FLAGS "-DWEBVIEW_STATIC")
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -framework WebKit -DWEBVIEW_STATIC")
+endif()
+
 include(FetchContent)
 FetchContent_Declare(
     webviewNative
     GIT_REPOSITORY https://github.com/webview/webview
-    GIT_TAG 0.12.0
+    GIT_TAG adbb85d0f54537b8034ece0bab67c7d1438e3cda
 )
+FetchContent_Populate(webviewNative)
 
-# Set webview build options before FetchContent_MakeAvailable
-set(WEBVIEW_BUILD_SHARED_LIBRARY ON CACHE BOOL "" FORCE)
-set(WEBVIEW_BUILD_STATIC_LIBRARY OFF CACHE BOOL "" FORCE)
-set(WEBVIEW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(WEBVIEW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(WEBVIEW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+include_directories(
+    "${webviewnative_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libs/include"
+)
+link_directories("${CMAKE_CURRENT_SOURCE_DIR}/libs")
 
-# For Windows, download WebView2 SDK if needed
+add_library(webview SHARED "${webviewnative_SOURCE_DIR}/webview.cc")
+
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    # Download WebView2 SDK
-    FetchContent_Declare(
-        webview2
-        URL https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.0.2210.55
-        URL_HASH SHA256=5a7b87ba50fb59ac2db2c59b6fd3bc8971a2e98797fb946f98e1f8b3f6c0de7c
-    )
-    FetchContent_MakeAvailable(webview2)
-    
-    # Set include path for WebView2
-    set(WEBVIEW_MSWEBVIEW2_INCLUDE_DIR "${webview2_SOURCE_DIR}/build/native/include" CACHE PATH "" FORCE)
-    set(WEBVIEW_MSWEBVIEW2_VERSION "1.0.2210.55" CACHE STRING "" FORCE)
-endif()
-
-# Now make webview available - it will use the WebView2 paths we set
-FetchContent_MakeAvailable(webviewNative)
-
-# The webview project should have created webview_shared target
-# Create an alias for compatibility with the C# bindings
-if(TARGET webview_shared)
-    # Create a custom target that ensures proper naming
-    add_library(webview ALIAS webview_shared)
-    
-    # On Windows, ensure the output is named webview.dll (not libwebview.dll)
-    if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-        set_target_properties(webview_shared PROPERTIES
-            OUTPUT_NAME "webview"
-            PREFIX ""
-        )
-        
-        # Copy WebView2Loader.dll to output directory if it exists
-        if(EXISTS "${webview2_SOURCE_DIR}/build/native/x64/WebView2Loader.dll")
-            configure_file(
-                "${webview2_SOURCE_DIR}/build/native/x64/WebView2Loader.dll"
-                "${CMAKE_BINARY_DIR}/WebView2Loader.dll"
-                COPYONLY
-            )
-        endif()
-    endif()
-else()
-    message(FATAL_ERROR "webview_shared target was not created by the webview project")
-endif()
-
-# For Linux, ensure we're linking against webkit2gtk-4.1 (not 4.0)
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    # The webview project should already handle this, but let's make sure
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(webkit2 REQUIRED webkit2gtk-4.1)
+    target_compile_definitions(webview PRIVATE "WEBVIEW_API=__declspec(dllexport)")
+    target_link_libraries(webview WebView2Loader.dll.lib)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libs/WebView2Loader.dll WebView2Loader.dll COPYONLY)
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    target_link_libraries(webview PkgConfig::gtk3 PkgConfig::webkit2)
 endif()
