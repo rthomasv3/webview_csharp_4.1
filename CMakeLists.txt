@@ -13,7 +13,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         IMPORTED_TARGET
       )
     pkg_check_modules(
-        webkit2 REQUIRED webkit2gtk-4.0
+        webkit2 REQUIRED webkit2gtk-4.1
         IMPORTED_TARGET
       )
     set(CMAKE_CXX_FLAGS "-DWEBVIEW_STATIC")
@@ -25,7 +25,7 @@ include(FetchContent)
 FetchContent_Declare(
     webviewNative
     GIT_REPOSITORY https://github.com/webview/webview
-    GIT_TAG adbb85d0f54537b8034ece0bab67c7d1438e3cda
+    GIT_TAG 0.12.0
 )
 FetchContent_Populate(webviewNative)
 

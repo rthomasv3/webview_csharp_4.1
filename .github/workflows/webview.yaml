@@ -1,7 +1,6 @@
 name: WebviewNative
 on:
-  push:
-    branches: [feature-nativeUpdate]
+  workflow_dispatch:
 
 jobs:
   build-linux:
@@ -9,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install libwebkit2gtk-4.0-dev xvfb -y
+        run: sudo apt-get update && sudo apt-get install libwebkit2gtk-4.1-dev xvfb -y
       - name: Get CMake
         uses: lukka/get-cmake@latest
       - name: Run CMake
@@ -18,7 +17,7 @@ jobs:
           configurePreset: 'ninja'
           buildPreset: 'ninja'
       - name: Upload artifact
-        uses: actions/upload-artifact@v1.0.0
+        uses: actions/upload-artifact@v4
         with:
           name: "webview-linux64"
           path: ./build
@@ -35,7 +34,7 @@ jobs:
           configurePreset: 'ninja'
           buildPreset: 'ninja'
       - name: Upload artifact
-        uses: actions/upload-artifact@v1.0.0
+        uses: actions/upload-artifact@v4
         with:
           name: "webview-mac64"
           path: ./build
@@ -53,7 +52,7 @@ jobs:
           configurePreset: 'windows'
           buildPreset: 'windows'
       - name: Upload artifact
-        uses: actions/upload-artifact@v1.0.0
+        uses: actions/upload-artifact@v4
         with:
           name: "webview-win64"
           path: ./build
