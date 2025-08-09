@@ -28,19 +28,26 @@ FetchContent_Declare(
 )
 
 # Set options for webview build
-set(WEBVIEW_BUILD_SHARED_LIBRARY ON CACHE BOOL "" FORCE)
+set(WEBVIEW_BUILD_STATIC_LIBRARY ON CACHE BOOL "" FORCE)
+set(WEBVIEW_BUILD_SHARED_LIBRARY OFF CACHE BOOL "" FORCE)
 set(WEBVIEW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(WEBVIEW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(WEBVIEW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(webviewNative)
 
-# Create an alias target for the webview shared library
-add_library(webview ALIAS webview::core_shared)
+# Create our own shared library that wraps the static webview library
+add_library(webview SHARED)
 
-# For Windows, copy the WebView2Loader.dll if it exists
+# Link against the webview static library
+target_link_libraries(webview PUBLIC webview::core_static)
+
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    target_compile_definitions(webview PRIVATE "WEBVIEW_API=__declspec(dllexport)")
+    target_link_libraries(webview PUBLIC WebView2Loader.dll.lib)
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/libs/WebView2Loader.dll)
         configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libs/WebView2Loader.dll WebView2Loader.dll COPYONLY)
     endif()
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    target_link_libraries(webview PUBLIC PkgConfig::gtk3 PkgConfig::webkit2)
 endif()
