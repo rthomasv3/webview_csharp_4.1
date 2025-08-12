@@ -28,7 +28,7 @@ sudo apt install -y libwebkit2gtk-4.1-dev libgtk-3-dev
 
 or DNF
 ```
-sudo dnf install gtk3-devel webkit2gtk4.1-devel
+sudo dnf install webkit2gtk4.1-devel gtk3-devel
 ```
 
 ## A basic example
