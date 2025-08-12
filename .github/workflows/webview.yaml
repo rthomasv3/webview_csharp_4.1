@@ -1,6 +1,7 @@
 name: WebviewNative
 on:
-  workflow_dispatch:
+  push:
+    branches: [feature-nativeUpdate]
 
 jobs:
   build-linux:
