@@ -23,12 +23,12 @@ Please install the developer packages of webkit2gtk and libgtk on your machine.
 
 With a distribution using apt run:  
 ```
-sudo apt install -y libwebkit2gtk-4.0-dev libgtk-3-dev
+sudo apt install -y libwebkit2gtk-4.1-dev libgtk-3-dev
 ```
 
 or DNF
 ```
-sudo dnf install webkit2gtk4,0-devel.x86_64 gtk3-devel.x84_64
+sudo dnf install gtk3-devel webkit2gtk4.1-devel
 ```
 
 ## A basic example
